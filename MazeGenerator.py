@@ -1,81 +1,95 @@
-from PIL import Image
+# Import the node and stack class
+from stack import Stack
+from node import Node
 
-stack = [] # Stack will contain a tuple of x and y
-grid_size = 1001 # Make an odd number for clean borders
-grid = [[0 for x in range(grid_size)] for y in range(grid_size)] # grid has 0 around outer wall
-# Cant touch - 0
-# Step - 1
-# Untouched - 2
-# In stack - 3
-x_pos, y_pos = 1, 1
+# Import PIL for image procressing
+from PIL import Image, ImageDraw
+import time
 
+# Make an array of size n of nodes
+gridSize = 102 # Always a mutiple of 3
+nodeSize = int(gridSize / 3)
+
+# Setup a constant for color white
+WHITE = (255, 255, 255)
 
 def main():
-    # Run the inital setup function
-    setup_nodes()
 
-    # Run the generator
-    # run_generator()
+    startTime = time.time()
 
-    # Print the final version of the maze
-    print_final()
-#
-# def run_generator():
-#
-#     step()
-#
-#     if len(stack) == 0:
-#         return
-#
-# def step():
-#     print(x_pos, y_pos)
-#     # Check to see if the "turtle" can can_move
-#     if can_move():
-#
-#
-# def can_move():
-#     # check in all directions for a 1 somewhere
-#     # Up
-#     if grid[x_pos][y_pos-2] == 1:
-#         print("up")
-#         return True
-#     # Right
-#     if grid[x_pos+2][y_pos] == 1:
-#         print("right")
-#         return True
-#     # Down
-#     if grid[x_pos][y_pos+2] == 1:
-#         print("Down")
-#         return True
+    # Setup the node grid
+    nodeGrid = [[Node(x, y) for x in range(nodeSize)] for y in range(nodeSize)]
+    setupNodes(nodeGrid)
 
+    # Create the image
+    maze = Image.new('RGB', (gridSize, gridSize))
+    pixelMap = maze.load()
 
-def setup_nodes():
-    # This will setup the play area
-    for i in range(1, grid_size-1, 2):
-        for j in range(1, grid_size-1, 2):
-            grid[i][j] = 1
+    # Initiaize the stack
+    stack = Stack()
+    currentNode = nodeGrid[0][0]
+    stack.push(currentNode)
 
+    # Begin the DFS seach
+    while not stack.isEmpty():
 
-def print_final():
-    # Prints out the final image, this is called last
-    im = Image.new("RGB", (grid_size, grid_size))
-    color_grid = []
-    for row in grid:
-        for cell in row:
-            if cell == 0:
-                color_grid.append((255, 0, 0))
-            elif cell == 1:
-                color_grid.append((0, 255, 0))
+        # Look at the current node and make it unavailable
+        currentNode = stack.getActive()
+        currentNode.makeUnavailable()
+
+        # Get the next node
+        nextNode = currentNode.getRandomNeighbor()
+        if nextNode != None:
+            stack.push(nextNode)
+            pixelMap = drawLine(pixelMap, currentNode, nextNode)
+        else:
+            stack.pop()
+
+    # Save the image
+    maze.save("Output/maze.png")
+
+    print(time.time() - startTime)
+
+def setupNodes(nodeGrid):
+    # Step 1: Tell each node who its neighbors are
+    for x in range(nodeSize):
+        for y in range(nodeSize):
+
+            currentNode = nodeGrid[x][y]
+
+            # Find the x neighbors
+            if x == 0:
+                currentNode.addNeighbor(nodeGrid[x+1][y])
+            elif x == nodeSize-1:
+                currentNode.addNeighbor(nodeGrid[x-1][y])
             else:
-                color_grid.append((0, 0, 255))
+                currentNode.addNeighbor(nodeGrid[x-1][y])
+                currentNode.addNeighbor(nodeGrid[x+1][y])
 
-    im.putdata(color_grid)
-    im.show()
+            # Find the y neighbors
+            if y == 0: # Test the edges before anything else
+                currentNode.addNeighbor(nodeGrid[x][y+1])
+            elif y == nodeSize-1:
+                currentNode.addNeighbor(nodeGrid[x][y-1])
+            else:
+                currentNode.addNeighbor(nodeGrid[x][y-1])
+                currentNode.addNeighbor(nodeGrid[x][y+1])
 
-def can_move():
-    # Returns true or false
-    print("test")
+def drawLine(maze, startNode, endNode):
+    # Draw the line on the map
+    dx = endNode.x - startNode.x
+    dy = endNode.y - startNode.y
+    startX = startNode.x * 3 + 1
+    startY = startNode.y * 3 + 1
+    endX = endNode.x * 3 + 1
+    endY = endNode.y * 3 + 1
 
+    maze[startX, startY] = WHITE
+    maze[startX + dx, startY + dy] = WHITE
+    maze[endX, endY] = WHITE
+    maze[endX - dx, endY - dy] = WHITE
+
+    return maze
 
 if __name__ == '__main__':
     main()
